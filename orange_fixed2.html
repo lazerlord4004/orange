@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="en"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>orange_ - Unblocked Games</title>
@@ -89,7 +87,7 @@
 <body>
 
     <!-- 1. BACKGROUND CANVAS -->
-    <canvas id="bg-canvas"></canvas>
+    <canvas id="bg-canvas" width="773" height="914"></canvas>
 
     <!-- 2. HEADER -->
     <header>
@@ -105,18 +103,18 @@
 
     <!-- 3. MAIN CONTENT -->
     <main id="main-view">
-        <div class="section-label" id="fav-label">⭐ favorites</div>
+        <div class="section-label" id="fav-label" style="display: none;">⭐ favorites</div>
         <div class="game-grid" id="fav-grid"></div>
-        <div class="section-label" id="all-label">all games</div>
+        <div class="section-label" id="all-label" style="display: none;">all games</div>
         <div class="game-grid" id="all-grid"></div>
-        <div id="empty-state" style="text-align:center; color:#555; margin-top:80px; display:none;">
+        <div id="empty-state" style="text-align: center; color: rgb(85, 85, 85); margin-top: 80px; display: block;">
             <div style="font-size:3rem; margin-bottom:10px;">🎮</div>
             <p>No games found yet.</p>
         </div>
     </main>
 
     <!-- 4. MODALS -->
-    <div class="cookie-banner" id="cookieBanner">
+    <div class="cookie-banner" id="cookieBanner" style="display: none;">
         <p class="cookie-text">orange_ uses cookies... <br><a href="#" class="cookie-link" style="color:var(--primary-orange)">Privacy Policy</a></p>
         <button class="cookie-btn" onclick="document.getElementById('cookieBanner').style.display='none'">Got it</button>
     </div>
@@ -538,5 +536,5 @@
         }
 
     </script>
-</body>
-</html>
+
+</body></html>
