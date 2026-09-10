@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>orange_ - Unblocked Games</title>
+    <style>
+        :root {
+            --primary-orange: #ff7b00;
+            --bg-dark: #050505;
+            --bg-panel: #121212;
+            --text-main: #e4e4e7;
+            --text-muted: #a1a1aa;
+            --border: #27272a;
+            --danger: #ff4444;
+            --star-active: #ffd700;
+            --star-inactive: #3f3f46;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; overflow-x: hidden; display: flex; flex-direction: column; }
+        
+        /* --- BACKGROUND STYLES --- */
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+        .trail-dot { position: fixed; height: 4px; width: 4px; background: rgba(255, 123, 0, 0.4); border-radius: 50%; pointer-events: none; z-index: 9999; animation: fadeOut 0.8s forwards; }
+        @keyframes fadeOut { 0% { opacity: 0.6; transform: scale(1); } 100% { opacity: 0; transform: scale(2); } }
+
+        /* --- LAYOUT --- */
+        header { padding: 2rem 1rem 1rem; text-align: center; position: relative; z-index: 10; }
+        .big-logo-container { display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; }
+        .logo-icon { font-size: 4.5rem; filter: drop-shadow(0 0 20px rgba(255, 123, 0, 0.8)); animation: float 6s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .site-name { font-size: 2.5rem; font-weight: 800; letter-spacing: -2px; color: var(--text-main); text-transform: lowercase; text-shadow: 0 0 10px rgba(0,0,0,0.8); }
+        .blink-cursor { color: var(--primary-orange); animation: blink 1s step-end infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+        .search-container { margin-top: 25px; max-width: 500px; margin-left: auto; margin-right: auto; position: relative; }
+        .search-input { width: 100%; padding: 14px 24px; background: rgba(20, 20, 20, 0.9); border: 1px solid var(--border); border-radius: 50px; color: white; font-size: 1rem; outline: none; backdrop-filter: blur(10px); transition: 0.3s; }
+        .search-input:focus { border-color: var(--primary-orange); }
+
+        /* --- CARDS --- */
+        main { padding: 2rem; max-width: 1200px; margin: 0 auto; width: 100%; flex: 1; position: relative; z-index: 5; }
+        .section-label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.2rem; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; display: none; padding-left: 5px; }
+        .game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 25px; margin-bottom: 3.5rem; }
+        .card { background: rgba(10, 10, 10, 0.85); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; overflow: hidden; position: relative; cursor: pointer; transition: all 0.3s; aspect-ratio: 1 / 1.3; display: flex; flex-direction: column; backdrop-filter: blur(10px); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .card:hover { transform: translateY(-8px) scale(1.02); border-color: var(--primary-orange); box-shadow: 0 15px 30px rgba(0,0,0,0.6), 0 0 25px rgba(255, 123, 0, 0.2); }
+        .card-img-wrapper { width: 100%; height: 65%; background: #000; position: relative; overflow: hidden; }
+        .card-img { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; transition: 0.4s; }
+        .card:hover .card-img { opacity: 1; transform: scale(1.1); }
+        .card-info { padding: 14px; flex: 1; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(to top, #000, transparent); }
+        .card-title { font-weight: 600; color: white; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .star-btn { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; transition: 0.2s; z-index: 2; border: 1px solid rgba(255,255,255,0.1); }
+        .star-btn.active { color: var(--star-active); background: rgba(255, 215, 0, 0.1); border-color: var(--star-active); transform: scale(1.1); }
+        .star-btn:not(.active) { color: var(--star-inactive); }
+
+        /* --- DASHBOARD --- */
+        .dashboard-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 5, 0.95); backdrop-filter: blur(15px); z-index: 1000; display: none; flex-direction: column; padding: 2rem; overflow-y: auto; }
+        .dashboard-container { max-width: 1200px; margin: 0 auto; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem; }
+        .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; }
+        .dash-title { color: white; font-size: 2rem; }
+        .close-dash { background: #333; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+        .dash-col { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+        .dash-col h3 { margin-bottom: 20px; color: var(--primary-orange); border-bottom: 1px solid #333; padding-bottom: 10px;}
+        .admin-game-list { max-height: 500px; overflow-y: auto; min-height: 100px; border: 1px solid #333; padding: 5px; border-radius: 5px; }
+        .admin-game-item { display: flex; justify-content: space-between; align-items: center; background: #000; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #333; }
+        .admin-game-info { display: flex; align-items: center; gap: 10px; }
+        .admin-game-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
+        .delete-btn { background: var(--danger); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+        .form-group { margin-bottom: 15px; }
+        .form-input { width: 100%; padding: 10px; background: #0f0f0f; border: 1px solid #333; color: white; border-radius: 6px; }
+        .form-textarea { width: 100%; height: 100px; padding: 10px; background: #0f0f0f; border: 1px solid #333; color: white; border-radius: 6px; font-family: monospace; }
+        .btn-dash { width: 100%; padding: 12px; background: var(--primary-orange); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-dash:hover { background: #ff9d42; }
+        .export-btn { background: #333; margin-top: 10px; }
+        .export-btn:hover { background: #555; }
+
+        /* --- MODALS --- */
+        .cookie-banner { position: fixed; bottom: 25px; left: 25px; background: rgba(10, 10, 10, 0.95); backdrop-filter: blur(15px); padding: 18px; border-radius: 12px; border: 1px solid var(--border); max-width: 340px; z-index: 200; display: none; animation: slideUp 0.5s ease-out; }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .cookie-text { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5; }
+        .cookie-btn { background: var(--primary-orange); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; float: right; }
+        .player-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); z-index: 2000; display: none; align-items: center; justify-content: center; }
+        .player-content { width: 96%; height: 92%; position: relative; background: black; border-radius: 12px; border: 1px solid #333; display: flex; flex-direction: column; }
+        .close-player { position: absolute; top: 15px; right: 15px; z-index: 10; background: rgba(255,255,255,0.1); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
+        .top-nav { position: absolute; top: 20px; right: 20px; z-index: 20; }
+        .nav-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; margin-left: 20px; cursor: pointer; transition: 0.2s; font-weight: 500; }
+        .nav-link:hover { color: var(--primary-orange); }
+        @media(max-width: 768px) { .dashboard-container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <!-- 1. BACKGROUND CANVAS -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- 2. HEADER -->
+    <header>
+        <div class="top-nav"><span class="nav-link" onclick="showAdminLogin()">Admin</span></div>
+        <div class="big-logo-container" onclick="showHome()">
+            <div class="logo-icon">🍊</div>
+            <div class="site-name">orange<span class="blink-cursor">_</span></div>
+        </div>
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="search games..." id="searchBar" onkeyup="renderGames()">
+        </div>
+    </header>
+
+    <!-- 3. MAIN CONTENT -->
+    <main id="main-view">
+        <div class="section-label" id="fav-label">⭐ favorites</div>
+        <div class="game-grid" id="fav-grid"></div>
+        <div class="section-label" id="all-label">all games</div>
+        <div class="game-grid" id="all-grid"></div>
+        <div id="empty-state" style="text-align:center; color:#555; margin-top:80px; display:none;">
+            <div style="font-size:3rem; margin-bottom:10px;">🎮</div>
+            <p>No games found yet.</p>
+        </div>
+    </main>
+
+    <!-- 4. MODALS -->
+    <div class="cookie-banner" id="cookieBanner">
+        <p class="cookie-text">orange_ uses cookies... <br><a href="#" class="cookie-link" style="color:var(--primary-orange)">Privacy Policy</a></p>
+        <button class="cookie-btn" onclick="document.getElementById('cookieBanner').style.display='none'">Got it</button>
+    </div>
+
+    <div class="dashboard-overlay" id="login-modal" style="align-items: center; justify-content: center;">
+        <div style="background: var(--bg-panel); padding: 2rem; border-radius: 12px; border: 1px solid var(--border); width: 90%; max-width: 400px; text-align: center;">
+            <h2 style="margin-bottom: 20px; color: white;">Admin Login</h2>
+            <input type="text" id="adminUser" class="form-input" placeholder="Username" style="margin-bottom: 10px;">
+            <input type="password" id="adminPass" class="form-input" placeholder="Password" style="margin-bottom: 20px;">
+            <button class="btn-dash" onclick="attemptLogin()">Login</button>
+            <button class="btn-dash" onclick="closeAll()" style="background: #333; margin-top: 10px;">Cancel</button>
+        </div>
+    </div>
+
+    <div class="dashboard-overlay" id="dashboardModal">
+        <div class="dash-header">
+            <div class="dash-title">Dashboard</div>
+            <button class="close-dash" onclick="closeAll()">Close</button>
+        </div>
+        <div class="dashboard-container">
+            <div class="dash-col">
+                <h3>Manage Games (<span id="game-count">0</span>)</h3>
+                <div class="admin-game-list" id="admin-list"></div>
+                <div style="margin-top: 20px; font-size: 0.8rem; color: #888; background: #000; padding: 10px; border-radius: 6px;">
+                    <strong>💾 Permanent for everyone</strong><br>Games are saved to the Firebase database instead of this browser.
+                </div>
+                <button class="btn-dash export-btn" onclick="exportData()">Export Data</button>
+            </div>
+            <div class="dash-col">
+                <h3>Add New Game</h3>
+                <div class="form-group"><label style="color:#aaa; font-size:0.9rem;">Game Title</label><input type="text" id="gameTitle" class="form-input"></div>
+                <div class="form-group"><label style="color:#aaa; font-size:0.9rem;">Image URL (Optional)</label><input type="text" id="gameImg" class="form-input"></div>
+                <div class="form-group"><label style="color:#aaa; font-size:0.9rem;">Embed HTML</label><textarea id="gameHtml" class="form-textarea"></textarea></div>
+                <button class="btn-dash" onclick="addGame()">Publish to All</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="player-modal" id="gamePlayer">
+        <div class="player-content">
+            <button class="close-player" onclick="document.getElementById('gamePlayer').style.display='none'">✕</button>
+            <div id="gameFrame" style="width:100%; height:100%;"></div>
+        </div>
+    </div>
+
+    <!-- 5. JAVASCRIPT -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+        import {
+            getFirestore,
+            collection,
+            getDocs,
+            addDoc,
+            deleteDoc,
+            doc
+        } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+        /*
+         * FIREBASE SETUP
+         * Replace ONLY the values below with your Firebase Web App config.
+         */
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT.firebasestorage.app",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const firebaseConfigured =
+            firebaseConfig.apiKey !== "YOUR_API_KEY" &&
+            firebaseConfig.projectId !== "YOUR_PROJECT_ID" &&
+            firebaseConfig.appId !== "YOUR_APP_ID";
+
+        let db = null;
+        let gamesCollection = null;
+
+        if (firebaseConfigured) {
+            const firebaseApp = initializeApp(firebaseConfig);
+            db = getFirestore(firebaseApp);
+            gamesCollection = collection(db, "games");
+        }
+
+        /* --- PART 1: BACKGROUND ANIMATION --- */
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let particlesArray;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initParticles();
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        class Particle {
+            constructor(x, y, directionX, directionY, size, color) {
+                this.x = x; this.y = y;
+                this.directionX = directionX; this.directionY = directionY;
+                this.size = size; this.color = color;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+            update() {
+                if (this.x > canvas.width || this.x < 0) this.directionX = -this.directionX;
+                if (this.y > canvas.height || this.y < 0) this.directionY = -this.directionY;
+                this.x += this.directionX;
+                this.y += this.directionY;
+                this.draw();
+            }
+        }
+
+        function initParticles() {
+            particlesArray = [];
+            let numberOfParticles = (canvas.height * canvas.width) / 9000;
+            for (let i = 0; i < numberOfParticles; i++) {
+                let size = (Math.random() * 2) + 1;
+                let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2);
+                let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2);
+                let directionX = (Math.random() * 0.4) - 0.2;
+                let directionY = (Math.random() * 0.4) - 0.2;
+                let color = 'rgba(255, 123, 0, 0.8)'; 
+                particlesArray.push(new Particle(x, y, directionX, directionY, size, color));
+            }
+        }
+
+        function connectParticles() {
+            let opacityValue = 1;
+            for (let a = 0; a < particlesArray.length; a++) {
+                for (let b = a; b < particlesArray.length; b++) {
+                    let distance = ((particlesArray[a].x - particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x)) + 
+                                   ((particlesArray[a].y - particlesArray[b].y) * (particlesArray[a].y - particlesArray[b].y));
+                    if (distance < (canvas.width/7) * (canvas.height/7)) {
+                        opacityValue = 1 - (distance/10000);
+                        ctx.strokeStyle = 'rgba(255, 123, 0,' + opacityValue * 0.5 + ')'; 
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+                        ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animateParticles() {
+            requestAnimationFrame(animateParticles);
+            ctx.clearRect(0, 0, innerWidth, innerHeight);
+            for (let i = 0; i < particlesArray.length; i++) {
+                particlesArray[i].update();
+            }
+            connectParticles();
+        }
+
+        resizeCanvas();
+        animateParticles();
+
+        /* --- PART 2: MOUSE TRAIL --- */
+        document.addEventListener('mousemove', (e) => {
+            const dot = document.createElement('div');
+            dot.className = 'trail-dot';
+            dot.style.left = e.pageX + 'px';
+            dot.style.top = e.pageY + 'px';
+            document.body.appendChild(dot);
+            setTimeout(() => dot.remove(), 600);
+        });
+
+        /* --- PART 3: APP LOGIC --- */
+        const CREDS = { u: "wirva", p: "Nick1440!" };
+        
+        // STATE: "I am Admin"
+        let isAdminLoggedIn = false; 
+
+        let games = [];
+
+        async function loadGames() {
+            if (!firebaseConfigured) {
+                console.error("Firebase is not configured.");
+                games = [];
+                renderGames();
+                return;
+            }
+
+            try {
+                const snapshot = await getDocs(gamesCollection);
+                games = [];
+
+                snapshot.forEach((gameDoc) => {
+                    games.push({
+                        id: gameDoc.id,
+                        ...gameDoc.data()
+                    });
+                });
+
+                games.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                restoreFavorites();
+                renderGames();
+
+                if (typeof renderAdminList === "function") {
+                    renderAdminList();
+                }
+            } catch (error) {
+                console.error("Failed to load games:", error);
+                alert("Could not load games from the database. Check your Firebase setup.");
+            }
+        }
+
+        window.onload = async function() {
+            if(!sessionStorage.getItem('cookie')) {
+                document.getElementById('cookieBanner').style.display = 'block';
+                sessionStorage.setItem('cookie', 'true');
+            }
+
+            await loadGames();
+        };
+
+        function renderGames() {
+            const favG = document.getElementById('fav-grid');
+            const allG = document.getElementById('all-grid');
+            if(!favG || !allG) return; 
+            favG.innerHTML = ''; allG.innerHTML = '';
+            let q = document.getElementById('searchBar').value.toLowerCase();
+            let f = games.filter(g => g.isFavorite && g.title.toLowerCase().includes(q));
+            let o = games.filter(g => !g.isFavorite && g.title.toLowerCase().includes(q));
+            
+            document.getElementById('fav-label').style.display = f.length ? 'block' : 'none';
+            document.getElementById('all-label').style.display = o.length ? 'block' : 'none';
+            document.getElementById('empty-state').style.display = (f.length + o.length) === 0 ? 'block' : 'none';
+
+            f.forEach(g => createCard(g, favG)); 
+            o.forEach(g => createCard(g, allG));
+        }
+
+        function createCard(g, con) {
+            let c = document.createElement('div');
+            c.className = 'card';
+            c.innerHTML = `
+                <div class="${g.isFavorite ? 'star-btn active' : 'star-btn'}" onclick="toggleFav(${JSON.stringify(g.id)},event)">★</div>
+                <div class="card-img-wrapper"><img src="${g.image}" class="card-img"></div>
+                <div class="card-info"><div class="card-title">${g.title}</div></div>
+            `;
+            c.onclick = () => launchGame(g);
+            con.appendChild(c);
+        }
+
+        window.toggleFav = function(id, e) {
+            e.stopPropagation();
+            let g = games.find(x => x.id === id);
+            if(g) {
+                g.isFavorite = !g.isFavorite;
+                saveFavorites();
+                renderGames();
+            }
+        }
+
+        window.launchGame = function(g) {
+            const frame = document.getElementById('gameFrame');
+            frame.innerHTML = ''; 
+            
+            // Use Shadow DOM to prevent conflicts
+            const shadow = frame.attachShadow({mode: 'open'});
+            shadow.innerHTML = g.html;
+
+            // Auto-Start
+            const startButtons = shadow.querySelectorAll('button, a[onclick*="start"], input[type="submit"]');
+            startButtons.forEach(btn => btn.click());
+
+            document.getElementById('gamePlayer').style.display = 'flex';
+        }
+
+        function saveFavorites() {
+            const favorites = games.filter(g => g.isFavorite).map(g => g.id);
+            localStorage.setItem('orange_favorites', JSON.stringify(favorites));
+        }
+
+        function restoreFavorites() {
+            try {
+                const favorites = JSON.parse(localStorage.getItem('orange_favorites')) || [];
+                games.forEach(g => {
+                    g.isFavorite = favorites.includes(g.id);
+                });
+            } catch(e) {}
+        }
+
+        window.showHome = function() { renderGames(); closeAll(); }
+        window.showAdminLogin = function() {
+            if (isAdminLoggedIn) {
+                document.getElementById('dashboardModal').style.display = 'flex';
+            } else {
+                document.getElementById('login-modal').style.display = 'flex';
+            }
+        }
+        window.closeAll = function() {
+            document.getElementById('login-modal').style.display = 'none';
+            // Keep Admin Logged In! (Don't logout when closing dashboard)
+            document.getElementById('dashboardModal').style.display = 'none';
+        }
+
+        window.attemptLogin = function() {
+            let u = document.getElementById('adminUser').value;
+            let p = document.getElementById('adminPass').value;
+            if(u === CREDS.u && p === CREDS.p) {
+                isAdminLoggedIn = true;
+                document.getElementById('login-modal').style.display = 'none';
+                document.getElementById('dashboardModal').style.display = 'flex';
+                document.getElementById('adminUser').value = ''; document.getElementById('adminPass').value = '';
+                renderAdminList();
+            } else { alert('Wrong credentials'); }
+        }
+
+        function renderAdminList() {
+            let list = document.getElementById('admin-list');
+            if (!list) return; 
+            list.innerHTML = ''; 
+            document.getElementById('game-count').innerText = games.length;
+            games.forEach(g => {
+                let item = document.createElement('div');
+                item.className = 'admin-game-item';
+                item.innerHTML = `
+                    <div class="admin-game-info">
+                        <img src="${g.image}" class="admin-game-thumb">
+                        <div><div style="color:white; font-weight:bold;">${g.title}</div></div>
+                    </div>
+                    <button class="delete-btn" onclick="deleteGame(${JSON.stringify(g.id)})">DELETE</button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        window.addGame = async function() {
+            const titleInput = document.getElementById('gameTitle');
+            const imgInput = document.getElementById('gameImg');
+            const htmlInput = document.getElementById('gameHtml');
+
+            if (!titleInput || !imgInput || !htmlInput) return;
+
+            const title = titleInput.value.trim();
+            const image = imgInput.value.trim() || `https://picsum.photos/seed/${Date.now()}/200/300`;
+            const gameHtml = htmlInput.value.trim();
+
+            if (!title || !gameHtml) {
+                alert('Please fill in the Game Title and Embed HTML.');
+                return;
+            }
+
+            const newGame = {
+                title,
+                image,
+                html: gameHtml,
+                isFavorite: false,
+                createdAt: Date.now()
+            };
+
+            try {
+                // Save to Firebase first so it is permanent for everyone.
+                if (firebaseConfigured) {
+                    const docRef = await addDoc(gamesCollection, newGame);
+                    newGame.id = docRef.id;
+                } else {
+                    // Still show it in Manage Games if Firebase has not been configured.
+                    // It will not be permanent for other visitors until Firebase is configured.
+                    newGame.id = 'local_' + Date.now();
+                }
+
+                // Put it at the top of Manage Games immediately.
+                games.unshift(newGame);
+
+                renderAdminList();
+                renderGames();
+
+                titleInput.value = '';
+                imgInput.value = '';
+                htmlInput.value = '';
+
+                const adminList = document.getElementById('admin-list');
+                if (adminList) adminList.scrollTop = 0;
+
+                alert(firebaseConfigured
+                    ? 'Game published to Manage Games and everyone!'
+                    : 'Game added to Manage Games. Configure Firebase to make it permanent for everyone.');
+
+            } catch (error) {
+                console.error('Error adding game:', error);
+                alert('Could not publish the game. Check your Firebase Firestore setup.');
+            }
+        }
+
+        window.deleteGame = async function(id) {
+            if(!confirm('Delete this game permanently?')) {
+                return;
+            }
+
+            if (!firebaseConfigured) {
+                alert('Firebase is not configured.');
+                return;
+            }
+
+            try {
+                await deleteDoc(doc(db, "games", id));
+
+                games = games.filter(g => g.id !== id);
+
+                renderAdminList();
+                renderGames();
+            } catch (error) {
+                console.error('Error deleting game:', error);
+                alert('Failed to delete game.');
+            }
+        }
+
+        window.exportData = function() {
+            let data = JSON.stringify(games, null, 4);
+            prompt("Backup your current game data. This export is for backup only:", data);
+        }
+
+    </script>
+</body>
+</html>
