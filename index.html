@@ -1,6 +1,265 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="en"><head>
+				<meta charset="UTF-8">
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
+				<style>
+					body {
+						background-color: white; /* Ensure the iframe has a white background */
+					}
+				</style>
+				<script>
+					var Z_CDN_WHITELIST = [
+						'cdn.jsdelivr.net',
+						'cdnjs.cloudflare.com',
+						'cdn.tailwindcss.com',
+						'unpkg.com',
+						'fonts.googleapis.com',
+						'd3js.org',
+						'cdn.babylonjs.com',
+						'html2canvas.hertzen.com',
+						'code.jquery.com',
+						'cdn.datatables.net',
+						'kit.fontawesome.com',
+						'code.createjs.com',
+						'cdn.plot.ly',
+						'fonts.gstatic.com',
+						'www.rgraph.net',
+						'api.mapbox.com',
+						'polyfill.io',
+						'cdn.quilljs.com',
+						'picsum.photos',
+						'esm.sh'
+					];
+
+					function z_isUrlInWhitelist(url) {
+						if (!url || typeof url !== 'string') {
+							return false;
+						}
+						try {
+							const urlObj = new URL(url);
+							const hostname = urlObj.hostname;
+							return Z_CDN_WHITELIST.some(domain => hostname === domain);
+						} catch (e) {
+							return false;
+						}
+					}
+
+						function z_proxyCdnUrl(url) {
+						if (!url || !url.startsWith('http')) {
+							return url;
+						}
+							if (!z_isUrlInWhitelist(url)) {
+							return url;
+						}
+						if (!url.startsWith('https://artifacts-cdn.chatglm.site/')) {
+							return 'https://artifacts-cdn.chatglm.site/' + url;
+						}
+						return url;
+					}
+					
+					// 增强版外部链接拦截 - 适合放在模板字符串中
+					document.addEventListener('click', function (ev) {
+						try {
+							const anchor = ev.target?.closest?.('a[href]') || null;
+							if (!anchor) return;
+
+							let href = anchor.getAttribute('href')?.trim() || '';
+							if (!href) return;
+
+							if (href.startsWith('javascript:')) return;
+
+							// 新需求：href="#" 的链接完全阻止跳转和任何行为
+							if (href === '#') {
+								ev.preventDefault();
+								return;
+							}
+
+							// 处理其他内部锚点（如 #about、#contact 等）
+							if (href.startsWith('#')) {
+								const rawId = href.slice(1);
+								if (!rawId) return;
+
+								const id = decodeURIComponent(rawId);
+								const target = 
+									document.getElementById(id) ||
+									document.querySelector('a[name="' + id.replace(/"/g, '\"') + '"]') ||
+									document.querySelector('[name="' + id.replace(/"/g, '\"') + '"]');
+
+								if (target && target.scrollIntoView) {
+									ev.preventDefault();
+									try {
+										history.pushState(null, '', href);
+									} catch (e) {}
+									target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+								}
+								return;
+							}
+
+							// 处理外部链接
+							let url;
+							try {
+								url = new URL(href, window.location.href);
+							} catch (e) {
+								return;
+							}
+
+							if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
+							const isExternal = url.hostname !== window.location.hostname;
+
+							if (isExternal || anchor.getAttribute('target') === '_blank') {
+								ev.preventDefault();
+								window.open(url.toString(), '_blank', 'noopener,noreferrer');
+							}
+
+						} catch (e) {
+							// 出错时不阻止默认行为
+						}
+					}, true);
+
+					// 1. 暴力清除函数：从 DOM 层面抹除 onclick 属性
+					var Z_removeInlineOnclick = function () {
+						// 专门锁定 href="#" 且带有 onclick 的 a 标签
+						const targetedLinks = document.querySelectorAll('a[href="#"][onclick]');
+						for (let i = 0; i < targetedLinks.length; i++) {
+							targetedLinks[i].removeAttribute('onclick');
+							targetedLinks[i].onclick = null; // 确保 JS 层的赋值也被清理
+						}
+					};
+					// 3. 动态监测：防止页面通过异步加载重新生成带 onclick 的元素
+					var z_observer = new MutationObserver(function () {
+						Z_removeInlineOnclick();
+					});
+
+					z_observer.observe(document.documentElement, {
+						childList: true,
+						subtree: true,
+						attributes: true,
+						attributeFilter: ['onclick']
+					});
+
+					// 4. 初始化执行一次
+					Z_removeInlineOnclick();
+
+					const Z_rawCreateElement = document.createElement;
+
+					document.createElement = function (tagName, ...args) {
+						const el = Z_rawCreateElement.call(this, tagName, ...args);
+
+						if (tagName.toLowerCase() === 'script') {
+							const rawSetAttribute = el.setAttribute;
+							const rawGetAttribute = el.getAttribute;
+							let srcValue = '';
+							
+							el.setAttribute = function (name, value) {
+								if (name === 'src' && typeof value === 'string') {
+									value = z_proxyCdnUrl(value);
+									srcValue = value;
+								}
+								return rawSetAttribute.call(this, name, value);
+							};
+
+							Object.defineProperty(el, 'src', {
+								get: function() {
+									return srcValue || rawGetAttribute.call(this, 'src') || '';
+								},
+								set: function(value) {
+									if (typeof value === 'string') {
+										srcValue = z_proxyCdnUrl(value);
+										rawSetAttribute.call(this, 'src', srcValue);
+									} else {
+										srcValue = value;
+									}
+								},
+								configurable: true,
+								enumerable: true
+							});
+						}
+
+						if (tagName.toLowerCase() === 'link') {
+							const rawSetAttribute = el.setAttribute;
+							const rawGetAttribute = el.getAttribute;
+							let hrefValue = '';
+							
+							el.setAttribute = function (name, value) {
+								if (name === 'href' && typeof value === 'string') {
+									value = z_proxyCdnUrl(value);
+									hrefValue = value;
+								}
+								return rawSetAttribute.call(this, name, value);
+							};
+
+							Object.defineProperty(el, 'href', {
+								get: function() {
+									return hrefValue || rawGetAttribute.call(this, 'href') || '';
+								},
+								set: function(value) {
+									if (typeof value === 'string') {
+										hrefValue = z_proxyCdnUrl(value);
+										rawSetAttribute.call(this, 'href', hrefValue);
+									} else {
+										hrefValue = value;
+									}
+								},
+								configurable: true,
+								enumerable: true
+							});
+						}
+
+						return el;
+					};
+
+					const Z_OriginalXMLHttpRequest = window.XMLHttpRequest;
+					window.XMLHttpRequest = function (...args) {
+						const xhr = new Z_OriginalXMLHttpRequest(...args);
+						const rawOpen = xhr.open;
+
+						xhr.open = function (method, url, ...rest) {
+							if (typeof url === 'string') {
+								const methodUpper = (method || '').toUpperCase();
+								if (methodUpper === 'GET' && z_isUrlInWhitelist(url)) {
+									url = z_proxyCdnUrl(url);
+								}
+							}
+							return rawOpen.call(this, method, url, ...rest);
+						};
+
+						return xhr;
+					};
+
+					window.XMLHttpRequest.prototype = Z_OriginalXMLHttpRequest.prototype;
+					Object.setPrototypeOf(window.XMLHttpRequest, Z_OriginalXMLHttpRequest);
+
+					const z_originalFetch = window.fetch;
+					window.fetch = async function (...args) {
+						if (args.length > 0) {
+							let url = '';
+							let method = 'GET';
+							
+							if (typeof args[0] === 'string') {
+								url = args[0];
+								if (args[1] && args[1].method) {
+									method = args[1].method.toUpperCase();
+								}
+								if (method === 'GET' && z_isUrlInWhitelist(url)) {
+									args[0] = z_proxyCdnUrl(url);
+								}
+							} else if (args[0] instanceof Request) {
+								const originalUrl = args[0].url;
+								method = (args[0].method || 'GET').toUpperCase();
+								if (method === 'GET' && z_isUrlInWhitelist(originalUrl)) {
+									const proxiedUrl = z_proxyCdnUrl(originalUrl);
+									if (proxiedUrl !== originalUrl) {
+										args[0] = new Request(proxiedUrl, args[0]);
+									}
+								}
+							}
+						}
+						return z_originalFetch.apply(this, args);
+					};
+				</script>
+			</head>
+			<body>
+				
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>orange_ - Unblocked Games</title>
@@ -85,11 +344,11 @@
         .nav-link:hover { color: var(--primary-orange); }
         @media(max-width: 768px) { .dashboard-container { grid-template-columns: 1fr; } }
     </style>
-</head>
-<body>
+
+
 
     <!-- 1. BACKGROUND CANVAS -->
-    <canvas id="bg-canvas"></canvas>
+    <canvas id="bg-canvas" width="773" height="914"></canvas>
 
     <!-- 2. HEADER -->
     <header>
@@ -105,18 +364,18 @@
 
     <!-- 3. MAIN CONTENT -->
     <main id="main-view">
-        <div class="section-label" id="fav-label">⭐ favorites</div>
+        <div class="section-label" id="fav-label" style="display: none;">⭐ favorites</div>
         <div class="game-grid" id="fav-grid"></div>
-        <div class="section-label" id="all-label">all games</div>
+        <div class="section-label" id="all-label" style="display: none;">all games</div>
         <div class="game-grid" id="all-grid"></div>
-        <div id="empty-state" style="text-align:center; color:#555; margin-top:80px; display:none;">
+        <div id="empty-state" style="text-align: center; color: rgb(85, 85, 85); margin-top: 80px; display: block;">
             <div style="font-size:3rem; margin-bottom:10px;">🎮</div>
             <p>No games found yet.</p>
         </div>
     </main>
 
     <!-- 4. MODALS -->
-    <div class="cookie-banner" id="cookieBanner">
+    <div class="cookie-banner" id="cookieBanner" style="display: none;">
         <p class="cookie-text">orange_ uses cookies... <br><a href="#" class="cookie-link" style="color:var(--primary-orange)">Privacy Policy</a></p>
         <button class="cookie-btn" onclick="document.getElementById('cookieBanner').style.display='none'">Got it</button>
     </div>
@@ -179,12 +438,13 @@
          * Replace ONLY the values below with your Firebase Web App config.
          */
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT.firebasestorage.app",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyAdWUd9zlTF-Uv799Mn_kkyXHJoiB-tvqU",
+            authDomain: "orange-games-64627.firebaseapp.com",
+            projectId: "orange-games-64627",
+            storageBucket: "orange-games-64627.firebasestorage.app",
+            messagingSenderId: "214553909877",
+            appId: "1:214553909877:web:def1729dead0a56140b63c",
+            measurementId: "G-NX1RCVHD68"
         };
 
         const firebaseConfigured =
@@ -536,25 +796,10 @@
             let data = JSON.stringify(games, null, 4);
             prompt("Backup your current game data. This export is for backup only:", data);
         }
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
-  import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAdWUd9zlTF-Uv799Mn_kkyXHJoiB-tvqU",
-    authDomain: "orange-games-64627.firebaseapp.com",
-    projectId: "orange-games-64627",
-    storageBucket: "orange-games-64627.firebasestorage.app",
-    messagingSenderId: "214553909877",
-    appId: "1:214553909877:web:def1729dead0a56140b63c",
-    measurementId: "G-NX1RCVHD68"
-  };
+    </script>
 
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-  const db = getFirestore(app);
-</script>
-    
-</body>
-</html>
+
+			
+		
+</body></html>
