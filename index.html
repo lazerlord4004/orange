@@ -1,265 +1,9 @@
+The buttons are failing because of a conflict with how the IDs are passed between the HTML and the JavaScript. I have fixed the code to handle the IDs correctly and to support games you added locally (before the database was working).
+
+**Copy this full file and replace your `index.html`.**
+
+```html
 <html lang="en"><head>
-				<meta charset="UTF-8">
-				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<style>
-					body {
-						background-color: white; /* Ensure the iframe has a white background */
-					}
-				</style>
-				<script>
-					var Z_CDN_WHITELIST = [
-						'cdn.jsdelivr.net',
-						'cdnjs.cloudflare.com',
-						'cdn.tailwindcss.com',
-						'unpkg.com',
-						'fonts.googleapis.com',
-						'd3js.org',
-						'cdn.babylonjs.com',
-						'html2canvas.hertzen.com',
-						'code.jquery.com',
-						'cdn.datatables.net',
-						'kit.fontawesome.com',
-						'code.createjs.com',
-						'cdn.plot.ly',
-						'fonts.gstatic.com',
-						'www.rgraph.net',
-						'api.mapbox.com',
-						'polyfill.io',
-						'cdn.quilljs.com',
-						'picsum.photos',
-						'esm.sh'
-					];
-
-					function z_isUrlInWhitelist(url) {
-						if (!url || typeof url !== 'string') {
-							return false;
-						}
-						try {
-							const urlObj = new URL(url);
-							const hostname = urlObj.hostname;
-							return Z_CDN_WHITELIST.some(domain => hostname === domain);
-						} catch (e) {
-							return false;
-						}
-					}
-
-						function z_proxyCdnUrl(url) {
-						if (!url || !url.startsWith('http')) {
-							return url;
-						}
-							if (!z_isUrlInWhitelist(url)) {
-							return url;
-						}
-						if (!url.startsWith('https://artifacts-cdn.chatglm.site/')) {
-							return 'https://artifacts-cdn.chatglm.site/' + url;
-						}
-						return url;
-					}
-					
-					// 增强版外部链接拦截 - 适合放在模板字符串中
-					document.addEventListener('click', function (ev) {
-						try {
-							const anchor = ev.target?.closest?.('a[href]') || null;
-							if (!anchor) return;
-
-							let href = anchor.getAttribute('href')?.trim() || '';
-							if (!href) return;
-
-							if (href.startsWith('javascript:')) return;
-
-							// 新需求：href="#" 的链接完全阻止跳转和任何行为
-							if (href === '#') {
-								ev.preventDefault();
-								return;
-							}
-
-							// 处理其他内部锚点（如 #about、#contact 等）
-							if (href.startsWith('#')) {
-								const rawId = href.slice(1);
-								if (!rawId) return;
-
-								const id = decodeURIComponent(rawId);
-								const target = 
-									document.getElementById(id) ||
-									document.querySelector('a[name="' + id.replace(/"/g, '\"') + '"]') ||
-									document.querySelector('[name="' + id.replace(/"/g, '\"') + '"]');
-
-								if (target && target.scrollIntoView) {
-									ev.preventDefault();
-									try {
-										history.pushState(null, '', href);
-									} catch (e) {}
-									target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-								}
-								return;
-							}
-
-							// 处理外部链接
-							let url;
-							try {
-								url = new URL(href, window.location.href);
-							} catch (e) {
-								return;
-							}
-
-							if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
-
-							const isExternal = url.hostname !== window.location.hostname;
-
-							if (isExternal || anchor.getAttribute('target') === '_blank') {
-								ev.preventDefault();
-								window.open(url.toString(), '_blank', 'noopener,noreferrer');
-							}
-
-						} catch (e) {
-							// 出错时不阻止默认行为
-						}
-					}, true);
-
-					// 1. 暴力清除函数：从 DOM 层面抹除 onclick 属性
-					var Z_removeInlineOnclick = function () {
-						// 专门锁定 href="#" 且带有 onclick 的 a 标签
-						const targetedLinks = document.querySelectorAll('a[href="#"][onclick]');
-						for (let i = 0; i < targetedLinks.length; i++) {
-							targetedLinks[i].removeAttribute('onclick');
-							targetedLinks[i].onclick = null; // 确保 JS 层的赋值也被清理
-						}
-					};
-					// 3. 动态监测：防止页面通过异步加载重新生成带 onclick 的元素
-					var z_observer = new MutationObserver(function () {
-						Z_removeInlineOnclick();
-					});
-
-					z_observer.observe(document.documentElement, {
-						childList: true,
-						subtree: true,
-						attributes: true,
-						attributeFilter: ['onclick']
-					});
-
-					// 4. 初始化执行一次
-					Z_removeInlineOnclick();
-
-					const Z_rawCreateElement = document.createElement;
-
-					document.createElement = function (tagName, ...args) {
-						const el = Z_rawCreateElement.call(this, tagName, ...args);
-
-						if (tagName.toLowerCase() === 'script') {
-							const rawSetAttribute = el.setAttribute;
-							const rawGetAttribute = el.getAttribute;
-							let srcValue = '';
-							
-							el.setAttribute = function (name, value) {
-								if (name === 'src' && typeof value === 'string') {
-									value = z_proxyCdnUrl(value);
-									srcValue = value;
-								}
-								return rawSetAttribute.call(this, name, value);
-							};
-
-							Object.defineProperty(el, 'src', {
-								get: function() {
-									return srcValue || rawGetAttribute.call(this, 'src') || '';
-								},
-								set: function(value) {
-									if (typeof value === 'string') {
-										srcValue = z_proxyCdnUrl(value);
-										rawSetAttribute.call(this, 'src', srcValue);
-									} else {
-										srcValue = value;
-									}
-								},
-								configurable: true,
-								enumerable: true
-							});
-						}
-
-						if (tagName.toLowerCase() === 'link') {
-							const rawSetAttribute = el.setAttribute;
-							const rawGetAttribute = el.getAttribute;
-							let hrefValue = '';
-							
-							el.setAttribute = function (name, value) {
-								if (name === 'href' && typeof value === 'string') {
-									value = z_proxyCdnUrl(value);
-									hrefValue = value;
-								}
-								return rawSetAttribute.call(this, name, value);
-							};
-
-							Object.defineProperty(el, 'href', {
-								get: function() {
-									return hrefValue || rawGetAttribute.call(this, 'href') || '';
-								},
-								set: function(value) {
-									if (typeof value === 'string') {
-										hrefValue = z_proxyCdnUrl(value);
-										rawSetAttribute.call(this, 'href', hrefValue);
-									} else {
-										hrefValue = value;
-									}
-								},
-								configurable: true,
-								enumerable: true
-							});
-						}
-
-						return el;
-					};
-
-					const Z_OriginalXMLHttpRequest = window.XMLHttpRequest;
-					window.XMLHttpRequest = function (...args) {
-						const xhr = new Z_OriginalXMLHttpRequest(...args);
-						const rawOpen = xhr.open;
-
-						xhr.open = function (method, url, ...rest) {
-							if (typeof url === 'string') {
-								const methodUpper = (method || '').toUpperCase();
-								if (methodUpper === 'GET' && z_isUrlInWhitelist(url)) {
-									url = z_proxyCdnUrl(url);
-								}
-							}
-							return rawOpen.call(this, method, url, ...rest);
-						};
-
-						return xhr;
-					};
-
-					window.XMLHttpRequest.prototype = Z_OriginalXMLHttpRequest.prototype;
-					Object.setPrototypeOf(window.XMLHttpRequest, Z_OriginalXMLHttpRequest);
-
-					const z_originalFetch = window.fetch;
-					window.fetch = async function (...args) {
-						if (args.length > 0) {
-							let url = '';
-							let method = 'GET';
-							
-							if (typeof args[0] === 'string') {
-								url = args[0];
-								if (args[1] && args[1].method) {
-									method = args[1].method.toUpperCase();
-								}
-								if (method === 'GET' && z_isUrlInWhitelist(url)) {
-									args[0] = z_proxyCdnUrl(url);
-								}
-							} else if (args[0] instanceof Request) {
-								const originalUrl = args[0].url;
-								method = (args[0].method || 'GET').toUpperCase();
-								if (method === 'GET' && z_isUrlInWhitelist(originalUrl)) {
-									const proxiedUrl = z_proxyCdnUrl(originalUrl);
-									if (proxiedUrl !== originalUrl) {
-										args[0] = new Request(proxiedUrl, args[0]);
-									}
-								}
-							}
-						}
-						return z_originalFetch.apply(this, args);
-					};
-				</script>
-			</head>
-			<body>
-				
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>orange_ - Unblocked Games</title>
@@ -306,7 +50,7 @@
         .card:hover .card-img { opacity: 1; transform: scale(1.1); }
         .card-info { padding: 14px; flex: 1; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(to top, #000, transparent); }
         .card-title { font-weight: 600; color: white; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .star-btn { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; transition: 0.2s; z-index: 2; border: 1px solid rgba(255,255,255,0.1); }
+        .star-btn { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; transition: 0.2s; z-index: 2; border: 1px solid rgba(255,255,255,0.1); user-select: none; }
         .star-btn.active { color: var(--star-active); background: rgba(255, 215, 0, 0.1); border-color: var(--star-active); transform: scale(1.1); }
         .star-btn:not(.active) { color: var(--star-inactive); }
 
@@ -344,8 +88,8 @@
         .nav-link:hover { color: var(--primary-orange); }
         @media(max-width: 768px) { .dashboard-container { grid-template-columns: 1fr; } }
     </style>
-
-
+</head>
+<body>
 
     <!-- 1. BACKGROUND CANVAS -->
     <canvas id="bg-canvas" width="773" height="914"></canvas>
@@ -435,7 +179,6 @@
 
         /*
          * FIREBASE SETUP
-         * Replace ONLY the values below with your Firebase Web App config.
          */
         const firebaseConfig = {
             apiKey: "AIzaSyAdWUd9zlTF-Uv799Mn_kkyXHJoiB-tvqU",
@@ -552,9 +295,7 @@
         /* --- PART 3: APP LOGIC --- */
         const CREDS = { u: "wirva", p: "Nick1440!" };
         
-        // STATE: "I am Admin"
         let isAdminLoggedIn = false; 
-
         let games = [];
 
         async function loadGames() {
@@ -585,7 +326,6 @@
                 }
             } catch (error) {
                 console.error("Failed to load games:", error);
-                alert("Could not load games from the database. Check your Firebase setup.");
             }
         }
 
@@ -594,7 +334,6 @@
                 document.getElementById('cookieBanner').style.display = 'block';
                 sessionStorage.setItem('cookie', 'true');
             }
-
             await loadGames();
         };
 
@@ -618,17 +357,38 @@
         function createCard(g, con) {
             let c = document.createElement('div');
             c.className = 'card';
-            c.innerHTML = `
-                <div class="${g.isFavorite ? 'star-btn active' : 'star-btn'}" onclick="toggleFav(${JSON.stringify(g.id)},event)">★</div>
-                <div class="card-img-wrapper"><img src="${g.image}" class="card-img"></div>
-                <div class="card-info"><div class="card-title">${g.title}</div></div>
-            `;
-            c.onclick = () => launchGame(g);
+
+            let star = document.createElement('div');
+            star.className = g.isFavorite ? 'star-btn active' : 'star-btn';
+            star.innerText = '★';
+            star.onclick = (e) => {
+                e.stopPropagation();
+                window.toggleFav(g.id, e);
+            };
+
+            let imgWrap = document.createElement('div');
+            imgWrap.className = 'card-img-wrapper';
+            let img = document.createElement('img');
+            img.src = g.image;
+            img.className = 'card-img';
+            imgWrap.appendChild(img);
+
+            let info = document.createElement('div');
+            info.className = 'card-info';
+            let title = document.createElement('div');
+            title.className = 'card-title';
+            title.innerText = g.title;
+            info.appendChild(title);
+
+            c.appendChild(star);
+            c.appendChild(imgWrap);
+            c.appendChild(info);
+
+            c.onclick = () => window.launchGame(g);
             con.appendChild(c);
         }
 
         window.toggleFav = function(id, e) {
-            e.stopPropagation();
             let g = games.find(x => x.id === id);
             if(g) {
                 g.isFavorite = !g.isFavorite;
@@ -641,11 +401,9 @@
             const frame = document.getElementById('gameFrame');
             frame.innerHTML = ''; 
             
-            // Use Shadow DOM to prevent conflicts
             const shadow = frame.attachShadow({mode: 'open'});
             shadow.innerHTML = g.html;
 
-            // Auto-Start
             const startButtons = shadow.querySelectorAll('button, a[onclick*="start"], input[type="submit"]');
             startButtons.forEach(btn => btn.click());
 
@@ -676,7 +434,6 @@
         }
         window.closeAll = function() {
             document.getElementById('login-modal').style.display = 'none';
-            // Keep Admin Logged In! (Don't logout when closing dashboard)
             document.getElementById('dashboardModal').style.display = 'none';
         }
 
@@ -700,13 +457,24 @@
             games.forEach(g => {
                 let item = document.createElement('div');
                 item.className = 'admin-game-item';
-                item.innerHTML = `
-                    <div class="admin-game-info">
-                        <img src="${g.image}" class="admin-game-thumb">
-                        <div><div style="color:white; font-weight:bold;">${g.title}</div></div>
-                    </div>
-                    <button class="delete-btn" onclick="deleteGame(${JSON.stringify(g.id)})">DELETE</button>
-                `;
+                
+                let info = document.createElement('div');
+                info.className = 'admin-game-info';
+                let img = document.createElement('img');
+                img.src = g.image;
+                img.className = 'admin-game-thumb';
+                let div = document.createElement('div');
+                div.innerHTML = `<div style="color:white; font-weight:bold;">${g.title}</div>`;
+                info.appendChild(img);
+                info.appendChild(div);
+
+                let btn = document.createElement('button');
+                btn.className = 'delete-btn';
+                btn.innerText = 'DELETE';
+                btn.onclick = () => window.deleteGame(g.id);
+
+                item.appendChild(info);
+                item.appendChild(btn);
                 list.appendChild(item);
             });
         }
@@ -735,20 +503,24 @@
                 createdAt: Date.now()
             };
 
+            let savedToCloud = false;
+
             try {
-                // Save to Firebase first so it is permanent for everyone.
                 if (firebaseConfigured) {
-                    const docRef = await addDoc(gamesCollection, newGame);
-                    newGame.id = docRef.id;
+                    try {
+                        const docRef = await addDoc(gamesCollection, newGame);
+                        newGame.id = docRef.id;
+                        savedToCloud = true;
+                    } catch (firebaseError) {
+                        console.error("Firebase Error:", firebaseError);
+                        alert("Error saving to cloud: " + firebaseError.message + "\n\n(Saved locally instead. Make sure you created the Firestore Database in the console)");
+                        newGame.id = 'local_' + Date.now();
+                    }
                 } else {
-                    // Still show it in Manage Games if Firebase has not been configured.
-                    // It will not be permanent for other visitors until Firebase is configured.
                     newGame.id = 'local_' + Date.now();
                 }
 
-                // Put it at the top of Manage Games immediately.
                 games.unshift(newGame);
-
                 renderAdminList();
                 renderGames();
 
@@ -759,18 +531,28 @@
                 const adminList = document.getElementById('admin-list');
                 if (adminList) adminList.scrollTop = 0;
 
-                alert(firebaseConfigured
-                    ? 'Game published to Manage Games and everyone!'
-                    : 'Game added to Manage Games. Configure Firebase to make it permanent for everyone.');
+                if (savedToCloud) {
+                    alert('Game published to everyone!');
+                } else if (firebaseConfigured) {
+                    alert('Game added to your list (Cloud save failed, saved locally).');
+                } else {
+                    alert('Game added locally.');
+                }
 
             } catch (error) {
                 console.error('Error adding game:', error);
-                alert('Could not publish the game. Check your Firebase Firestore setup.');
+                alert('General Error: ' + error.message);
             }
         }
 
         window.deleteGame = async function(id) {
-            if(!confirm('Delete this game permanently?')) {
+            if(!confirm('Delete this game permanently?')) return;
+
+            // FIX: Handle local games
+            if (id.startsWith('local_')) {
+                games = games.filter(g => g.id !== id);
+                renderAdminList();
+                renderGames();
                 return;
             }
 
@@ -781,9 +563,7 @@
 
             try {
                 await deleteDoc(doc(db, "games", id));
-
                 games = games.filter(g => g.id !== id);
-
                 renderAdminList();
                 renderGames();
             } catch (error) {
@@ -799,7 +579,5 @@
 
     </script>
 
-
-			
-		
 </body></html>
+```
