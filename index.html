@@ -1,3 +1,8 @@
+I have reverted the UI bar back to the original centered design, but **kept the fixes** so the games actually work and can be re-opened.
+
+**Copy this full code and replace your `index.html`.**
+
+```html
 <html lang="en"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -77,7 +82,7 @@
         .cookie-btn { background: var(--primary-orange); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; float: right; }
         .player-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); z-index: 2000; display: none; align-items: center; justify-content: center; }
         .player-content { width: 96%; height: 92%; position: relative; background: black; border-radius: 12px; border: 1px solid #333; display: flex; flex-direction: column; }
-        .close-player { position: absolute; top: 15px; right: 15px; z-index: 10; background: rgba(255,255,255,0.1); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
+        .close-player { position: absolute; top: 15px; right: 15px; z-index: 10; background: rgba(255,255,255,0.1); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; }
         .top-nav { position: absolute; top: 20px; right: 20px; z-index: 20; }
         .nav-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; margin-left: 20px; cursor: pointer; transition: 0.2s; font-weight: 500; }
         .nav-link:hover { color: var(--primary-orange); }
@@ -155,7 +160,7 @@
 
     <div class="player-modal" id="gamePlayer">
         <div class="player-content">
-            <button class="close-player" onclick="document.getElementById('gamePlayer').style.display='none'">✕</button>
+            <button class="close-player" onclick="window.closePlayer()">✕</button>
             <div id="gameFrame" style="width:100%; height:100%;"></div>
         </div>
     </div>
@@ -393,16 +398,37 @@
         }
 
         window.launchGame = function(g) {
-            const frame = document.getElementById('gameFrame');
-            frame.innerHTML = ''; 
-            
-            const shadow = frame.attachShadow({mode: 'open'});
-            shadow.innerHTML = g.html;
+            const frameContainer = document.getElementById('gameFrame');
+            frameContainer.innerHTML = ''; // Clear previous game
 
-            const startButtons = shadow.querySelectorAll('button, a[onclick*="start"], input[type="submit"]');
-            startButtons.forEach(btn => btn.click());
+            // Create a Blob (Virtual File) from the HTML string
+            // This ensures scripts and styles execute correctly
+            const blob = new Blob([g.html], { type: 'text/html' });
+            const gameUrl = URL.createObjectURL(blob);
+
+            // Create an Iframe to load the game
+            const iframe = document.createElement('iframe');
+            iframe.src = gameUrl;
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.border = 'none';
+            iframe.style.backgroundColor = 'black';
+            
+            // Sandbox settings: allow scripts, forms, modals, popups, but keep it somewhat secure
+            iframe.setAttribute('allow', 'fullscreen');
+            iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals allow-popups');
+
+            frameContainer.appendChild(iframe);
 
             document.getElementById('gamePlayer').style.display = 'flex';
+        }
+
+        window.closePlayer = function() {
+            const player = document.getElementById('gamePlayer');
+            const frameContainer = document.getElementById('gameFrame');
+            
+            player.style.display = 'none';
+            frameContainer.innerHTML = ''; // This kills the iframe and stops scripts
         }
 
         function saveFavorites() {
@@ -543,7 +569,6 @@
         window.deleteGame = async function(id) {
             if(!confirm('Delete this game permanently?')) return;
 
-            // FIX: Handle local games
             if (id.startsWith('local_')) {
                 games = games.filter(g => g.id !== id);
                 renderAdminList();
